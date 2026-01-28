@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/lib/utils';
-import { client } from '@/api/client';
+import ProjectService from '@/services/projectService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
+import {
   ArrowLeft, Plus, CheckCircle2, Circle, Loader2,
   ListTodo, Settings
 } from 'lucide-react';
@@ -12,13 +12,14 @@ import { motion } from 'framer-motion';
 import TaskList from '@/components/tasks/TaskList';
 import ProjectModal from '@/components/projects/ProjectModal';
 
+
 function generateId() {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 export default function ProjectDetail() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const projectId = urlParams.get('id');
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get('id');
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,29 +27,33 @@ export default function ProjectDetail() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
   // Fetch project on mount
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
+    try {
     setLoading(true);
-    const projects = await client.entities.Project.list();
-    const found = projects.find(p => p.id === projectId);
-    setProject(found);
+    const data = await ProjectService.getProject(projectId);
+    setProject(data);
+    } finally {
     setLoading(false);
-  };
+    }
+    }, [projectId]);
 
-  useEffect(() => {
-    loadProject();
-  }, [projectId]);
+
+    useEffect(() => {
+    if (projectId) loadProject();
+  }, [projectId, loadProject]);
+
 
   // Update project helper
   const updateProject = useCallback(async (updates) => {
     if (!project) return;
-    await client.entities.Project.update(project.id, updates);
-    loadProject(); // refresh after update
-  }, [project]);
+    await ProjectService.updateProject(project.id, updates);
+    await loadProject();
+  }, [project, loadProject]);
+
 
   // Task handlers
   const handleAddTask = () => {
     if (!newTaskTitle.trim()) return;
-
     const newTask = {
       id: generateId(),
       title: newTaskTitle.trim(),
@@ -57,23 +62,27 @@ export default function ProjectDetail() {
       order: (project?.tasks?.length || 0),
       subtasks: []
     };
-
     updateProject({
       tasks: [...(project?.tasks || []), newTask]
     });
     setNewTaskTitle('');
   };
 
+
   const handleToggleTask = (task) => {
     const updatedTasks = (project?.tasks || []).map(t =>
-      t.id === task.id ? { 
-        ...t, 
+      t.id === task.id ? {
+        ...t,
         completed: !t.completed,
-        subtasks: (t.subtasks || []).map(s => ({ ...s, completed: !t.completed }))
-      } : t
+        subtasks: (t.subtasks || []).map(s => ({
+          ...s,
+          completed: !t.completed
+        }))
+      }: t
     );
     updateProject({ tasks: updatedTasks });
   };
+
 
   const handleEditTask = (updatedTask) => {
     const updatedTasks = (project?.tasks || []).map(t =>
@@ -81,6 +90,7 @@ export default function ProjectDetail() {
     );
     updateProject({ tasks: updatedTasks });
   };
+
 
   const handleDeleteTask = (taskId) => {
     const updatedTasks = (project?.tasks || []).filter(t => t.id !== taskId);

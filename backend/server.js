@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import healthRoute from './routes/health.js';
+import projectRoute from './routes/project.routes.js';
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 5000;
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // ROUTES
 app.use('/api/health', healthRoute);
+app.use('/api/projects', projectRoute);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

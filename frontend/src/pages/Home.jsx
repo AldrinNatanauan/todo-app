@@ -1,6 +1,6 @@
 // frontend/src/pages/Home.jsx
 import React, { useState, useEffect } from 'react';
-import { client } from '@/api/client';
+import ProjectService from '@/services/projectService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, FolderKanban, Loader2 } from 'lucide-react';
@@ -18,8 +18,12 @@ export default function Home() {
   // Fetch projects on mount
   const loadProjects = async () => {
     setLoading(true);
-    const data = await client.entities.Project.list('-created_date');
-    setProjects(data);
+    try {
+      const data = await ProjectService.getAllProjects();
+      setProjects(data);
+    } catch (err) {
+      console.error('Error loading projects:', err);
+    }
     setLoading(false);
   };
 
@@ -29,14 +33,18 @@ export default function Home() {
 
   // Handlers
   const handleSave = async (data) => {
-    if (editingProject) {
-      await client.entities.Project.update(editingProject.id, data);
-    } else {
-      await client.entities.Project.create(data);
+    try {
+      if (editingProject) {
+        await ProjectService.updateProject(editingProject.id, data);
+      } else {
+        await ProjectService.createProject(data);
+      }
+      setEditingProject(null);
+      setShowModal(false);
+      loadProjects(); // refresh list
+    } catch (err) {
+      console.error('Error saving project:', err);
     }
-    setEditingProject(null);
-    setShowModal(false);
-    loadProjects(); // refresh list
   };
 
   const handleEdit = (project) => {
@@ -45,8 +53,21 @@ export default function Home() {
   };
 
   const handleDelete = async (id) => {
-    await client.entities.Project.delete(id);
-    loadProjects(); // refresh list
+    try {
+      await ProjectService.deleteProject(id);
+      loadProjects(); // refresh list
+    } catch (err) {
+      console.error('Error deleting project:', err);
+    }
+  };
+
+  const handleToggleProject = async (id) => {
+    try {
+      await ProjectService.toggleProject(id);
+      loadProjects();
+    } catch (err) {
+      console.error('Error toggling project:', err);
+    }
   };
 
   // Filtered projects by search
@@ -157,6 +178,7 @@ export default function Home() {
                     project={project}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    onToggle={() => handleToggleProject(project.id)}
                   />
                 </motion.div>
               ))}

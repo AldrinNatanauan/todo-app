@@ -4,12 +4,13 @@ import ProjectDetail from './pages/ProjectDetail.jsx';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
 import './App.css';
+import api from './lib/api.js';
 
 function App() {
   const [health, setHealth] = useState("loading...");
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/health")
+    api.get('/health')
       .then((response) => {
         console.log("Backend response: ", response.data);
         setHealth(response.data.status);
@@ -23,7 +24,7 @@ function App() {
   return (
     <HashRouter>
       {/* Status bar outside of Routes */}
-      <p className="status text-sm text-[hsl(0,0%,50%)]">
+      <p className="status text-sm text-[hsl(0,0%,50%)] absolute bottom-1 right-1">
         Status: <span id={`status-${health}`}>{health}</span>
       </p>
 
