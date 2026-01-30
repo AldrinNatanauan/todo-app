@@ -42,14 +42,15 @@ export default function ProjectDetail() {
     if (projectId) loadProject();
   }, [projectId, loadProject]);
 
-
   // Update project helper
-  const updateProject = useCallback(async (updates) => {
+  const updateProject = async (updates) => {
     if (!project) return;
-    await ProjectService.updateProject(project.id, updates);
-    await loadProject();
-  }, [project, loadProject]);
-
+    setProject(prev => ({ ...prev, ...updates }));
+    await ProjectService.updateProject(project.id, {
+      ...project,
+      ...updates
+    });
+  };
 
   // Task handlers
   const handleAddTask = () => {
@@ -68,7 +69,6 @@ export default function ProjectDetail() {
     setNewTaskTitle('');
   };
 
-
   const handleToggleTask = (task) => {
     const updatedTasks = (project?.tasks || []).map(t =>
       t.id === task.id ? {
@@ -83,7 +83,6 @@ export default function ProjectDetail() {
     updateProject({ tasks: updatedTasks });
   };
 
-
   const handleEditTask = (updatedTask) => {
     const updatedTasks = (project?.tasks || []).map(t =>
       t.id === updatedTask.id ? updatedTask : t
@@ -91,11 +90,49 @@ export default function ProjectDetail() {
     updateProject({ tasks: updatedTasks });
   };
 
-
   const handleDeleteTask = (taskId) => {
-    const updatedTasks = (project?.tasks || []).filter(t => t.id !== taskId);
+    const updatedTasks = project.tasks
+      .filter(t => t.id !== taskId)
+      .map((t, i) => ({ ...t, order: i }));
+
     updateProject({ tasks: updatedTasks });
   };
+
+  const handleTaskDragEnd = (taskId, newOrder) => {
+    setProject(prev => {
+      if (!prev?.tasks) return prev;
+
+      const tasks = prev.tasks.map(t => ({ ...t }));
+      const moved = tasks.find(t => t.id === taskId);
+      if (!moved) return prev;
+
+      const oldOrder = moved.order;
+
+      tasks.forEach(t => {
+        if (t.id === taskId) return;
+
+        if (oldOrder < newOrder && t.order > oldOrder && t.order <= newOrder) {
+          t.order -= 1;
+        }
+
+        if (oldOrder > newOrder && t.order >= newOrder && t.order < oldOrder) {
+          t.order += 1;
+        }
+      });
+
+      moved.order = newOrder;
+
+      return {
+        ...prev,
+        tasks: tasks.sort((a, b) => a.order - b.order)
+      };
+    });
+
+    ProjectService
+      .changeTaskOrder(project.id, taskId, newOrder)
+      .catch(() => loadProject());
+  };
+
 
   // Subtask handlers
   const handleAddSubtask = (taskId, title) => {
@@ -198,7 +235,19 @@ export default function ProjectDetail() {
         </div>
 
         {/* Task List */}
-        <TaskList tasks={tasks} projectColor={project.color} onToggleTask={handleToggleTask} onEditTask={handleEditTask} onDeleteTask={handleDeleteTask} onAddSubtask={handleAddSubtask} onToggleSubtask={handleToggleSubtask} />
+        <TaskList
+          tasks={tasks}
+          projectColor={project.color}
+          onReorderTasks={(oldIndex, newIndex) => {
+            const taskId = tasks[oldIndex].id;
+            handleTaskDragEnd(taskId, newIndex);
+          }}
+          onToggleTask={handleToggleTask}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+          onAddSubtask={handleAddSubtask}
+          onToggleSubtask={handleToggleSubtask}
+        />
 
         {/* Project Modal */}
         <ProjectModal open={showProjectModal} onClose={() => setShowProjectModal(false)} onSave={updateProject} project={project} />

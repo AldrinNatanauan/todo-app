@@ -11,6 +11,7 @@ import {
   toggleTask,
   updateTask,
   deleteTask,
+  orderChangeTask,
   addSubtask,
   toggleSubtask,
   deleteSubtask
@@ -31,6 +32,7 @@ router.post('/:projectId/tasks', addTask);
 router.put('/:projectId/tasks/:taskId/toggle', toggleTask);
 router.put('/:projectId/tasks/:taskId', updateTask);
 router.delete('/:projectId/tasks/:taskId', deleteTask);
+router.put('/:projectId/tasks/:taskId/order', orderChangeTask);
 
 // Subtasks
 router.post('/:projectId/tasks/:taskId/subtasks', addSubtask);

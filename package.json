@@ -4,8 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron electron/main.js",
-    "dev": "cd frontend && npm run dev"
+    "start": "electron electron/main.js"
   },
   "keywords": [],
   "author": "",

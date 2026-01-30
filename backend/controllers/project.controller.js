@@ -99,6 +99,17 @@ export const deleteTask = (req, res) => {
     res.status(204).send();
 };
 
+// Order change task
+export const orderChangeTask = (req, res) => {
+    const { projectId, taskId } = req.params;
+    const { newOrder } = req.body;
+    const task = Project.orderChangeTask(projectId, taskId, Number(newOrder));
+    if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+    }
+    res.json(task);
+};
+
 // Add subtask
 export const addSubtask = (req, res) => {
     const { projectId, taskId } = req.params;

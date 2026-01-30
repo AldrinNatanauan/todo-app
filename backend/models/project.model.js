@@ -109,6 +109,40 @@ const Project = {
         return true;
     },
 
+    orderChangeTask(projectId, taskId, newOrder) {
+        const project = projects.find(p => p.id === projectId);
+        if (!project) return null;
+
+        const tasks = project.tasks;
+        const movedTask = tasks.find(t => t.id === taskId);
+        if (!movedTask) return null;
+
+        const oldOrder = movedTask.order;
+        if (oldOrder === newOrder) return movedTask;
+
+        tasks.forEach(task => {
+            if (task.id === taskId) return;
+            // Moving down
+            if (oldOrder < newOrder) {
+                if (task.order > oldOrder && task.order <= newOrder) {
+                    task.order -= 1;
+                }
+            }
+            // Moving up
+            if (oldOrder > newOrder) {
+                if (task.order >= newOrder && task.order < oldOrder) {
+                    task.order += 1;
+                }
+            }
+        });
+        movedTask.order = newOrder;
+        project.tasks = tasks
+            .sort((a, b) => a.order - b.order)
+            .map((task, index) => ({ ...task, order: index }));
+
+        return movedTask;
+    },
+
     addSubtask(projectId, taskId, subtask) {
         const project = projects.find(p => p.id === projectId);
         if (!project) return null;

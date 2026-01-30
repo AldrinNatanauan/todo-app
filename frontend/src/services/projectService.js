@@ -54,6 +54,14 @@ const ProjectService = {
     return res.status === 204;
   },
 
+  changeTaskOrder: async (projectId, taskId, newOrder) => {
+    const res = await api.put(
+      `/projects/${projectId}/tasks/${taskId}/order`,
+      { newOrder }
+    );
+    return res.data;
+  },
+
   // Subtasks
   addSubtask: async (projectId, taskId, subtaskData) => {
     const res = await api.post(`/projects/${projectId}/tasks/${taskId}/subtasks`, subtaskData);
