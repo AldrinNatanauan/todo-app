@@ -136,15 +136,38 @@ export default function ProjectDetail() {
 
   // Subtask handlers
   const handleAddSubtask = (taskId, title) => {
-    const newSubtask = { id: generateId(), title, completed: false };
-    const updatedTasks = (project?.tasks || []).map(t => {
-      if (t.id === taskId) {
-        const subtasks = [...(t.subtasks || []), newSubtask];
-        return { ...t, subtasks };
-      }
-      return t;
+    if (!title.trim()) return;
+
+    setProject(prev => {
+      const updatedTasks = (prev?.tasks || []).map(task => {
+        if (task.id !== taskId) return task;
+
+        const subtasks = [...(task.subtasks || [])];
+        const newSubtask = {
+          id: generateId(),
+          title: title.trim(),
+          completed: false,
+          order: subtasks.length
+        };
+
+        return { ...task, subtasks: [...subtasks, newSubtask] };
+      });
+      return { ...prev, tasks: updatedTasks };
     });
-    updateProject({ tasks: updatedTasks });
+
+    const task = project.tasks.find(t => t.id === taskId);
+    const newSubtask = {
+      id: generateId(),
+      title: title.trim(),
+      completed: false,
+      order: (task?.subtasks?.length || 0)
+    };
+
+    updateProject({
+      tasks: project.tasks.map(t => 
+        t.id === taskId ? { ...t, subtasks: [...(t.subtasks || []), newSubtask] } : t
+      )
+    });
   };
 
   const handleToggleSubtask = (subtask) => {
@@ -156,6 +179,82 @@ export default function ProjectDetail() {
     });
     updateProject({ tasks: updatedTasks });
   };
+
+  const handleEditSubtask = (subtask) => {
+    const updatedTasks = (project?.tasks || []).map(task => {
+      if (!(task.subtasks || []).some(s => s.id === subtask.id)) return task;
+      const subtasks = task.subtasks.map(s => s.id === subtask.id ? subtask : s);
+      return { ...task, subtasks };
+    });
+    updateProject({ tasks: updatedTasks });
+  };
+
+  const handleDeleteSubtask = (taskId, subtaskId) => {
+    const updatedTasks = (project?.tasks || []).map(task => {
+      if (task.id !== taskId) return task;
+      const subtasks = task.subtasks.filter(s => s.id !== subtaskId);
+      return { ...task, subtasks };
+    });
+    updateProject({ tasks: updatedTasks });
+  };
+
+  // Subtask drag within the same task
+  const handleSubtaskDragEnd = async (taskId, subtaskId, newOrder) => {
+    try {
+      const updatedSubtask = await ProjectService.changeSubtaskOrder(
+        project.id,
+        taskId,
+        subtaskId,
+        newOrder
+      );
+      const updatedTasks = project.tasks.map(task => {
+        if (task.id !== taskId) return task;
+        const subtasks = task.subtasks
+          .map(s => (s.id === subtaskId ? updatedSubtask : s))
+          .sort((a, b) => a.order - b.order)
+          .map((s, i) => ({ ...s, order: i }));
+        return { ...task, subtasks };
+      });
+
+      updateProject({ tasks: updatedTasks });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
+  // Move subtask across tasks
+  const handleMoveSubtask = async (subtaskId, fromTaskId, toTaskId, newOrder = null) => {
+    try {
+      const movedSubtask = await ProjectService.moveSubtask(
+        project.id,
+        subtaskId,
+        fromTaskId,
+        toTaskId,
+        newOrder
+      );
+      const updatedTasks = project.tasks.map(task => {
+        if (task.id === fromTaskId) {
+          const remainingSubtasks = task.subtasks
+            .filter(s => s.id !== subtaskId)
+            .map((s, i) => ({ ...s, order: i }));
+          return { ...task, subtasks: remainingSubtasks };
+        }
+        if (task.id === toTaskId) {
+          const newSubtasks = [...task.subtasks, movedSubtask]
+            .sort((a, b) => a.order - b.order)
+            .map((s, i) => ({ ...s, order: i }));
+          return { ...task, subtasks: newSubtasks };
+        }
+        return task;
+      });
+      updateProject({ tasks: updatedTasks });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
 
   if (loading) {
     return (
@@ -247,6 +346,14 @@ export default function ProjectDetail() {
           onDeleteTask={handleDeleteTask}
           onAddSubtask={handleAddSubtask}
           onToggleSubtask={handleToggleSubtask}
+          onEditSubtask={handleEditSubtask}
+          onDeleteSubtask={handleDeleteSubtask}
+          onReorderSubtasks={(taskId, oldIndex, newIndex) => {
+            handleSubtaskDragEnd(taskId, tasks.find(t => t.id === taskId).subtasks[oldIndex].id, newIndex);
+          }}
+          onMoveSubtask={(fromTaskId, toTaskId, subtaskId, newOrder) => {
+            handleMoveSubtask(subtaskId, fromTaskId, toTaskId, newOrder);
+          }}
         />
 
         {/* Project Modal */}

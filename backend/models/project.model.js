@@ -16,11 +16,11 @@ const Project = {
         if (!project.name) return null;
 
         const newProject = {
-        id: uuidv4(),
-        name: project.name,
-        description: project.description || "",
-        color: project.color || "",
-        tasks: [],
+            id: uuidv4(),
+            name: project.name,
+            description: project.description || "",
+            color: project.color || "",
+            tasks: [],
         };
 
         projects.push(newProject);
@@ -64,12 +64,12 @@ const Project = {
         if (!project) return null;
 
         const newTask = {
-        id: uuidv4(),
-        title: task.title,
-        description: task.description || "",
-        completed: false,
-        order: project.tasks.length,
-        subtasks: [],
+            id: uuidv4(),
+            title: task.title,
+            description: task.description || "",
+            completed: false,
+            order: project.tasks.length,
+            subtasks: [],
         };
 
         project.tasks.push(newTask);
@@ -151,10 +151,10 @@ const Project = {
         if (!task) return null;
 
         const newSubtask = {
-        id: uuidv4(),
-        title: subtask.title,
-        completed: false,
-        order: task.subtasks.length,
+            id: uuidv4(),
+            title: subtask.title,
+            completed: false,
+            order: task.subtasks.length,
         };
 
         task.subtasks.push(newSubtask);
@@ -188,6 +188,87 @@ const Project = {
         task.subtasks.splice(index, 1);
         return true;
     },
+
+    orderChangeSubtask(projectId, taskId, subtaskId, newOrder) {
+        const project = projects.find(p => p.id === projectId);
+        if (!project) return null;
+
+        const task = project.tasks.find(t => t.id === taskId);
+        if (!task) return null;
+
+        const subtasks = task.subtasks;
+        const movedSubtask = subtasks.find(st => st.id === subtaskId);
+        if (!movedSubtask) return null;
+
+        const oldOrder = movedSubtask.order;
+        if (oldOrder === newOrder) return movedSubtask;
+
+        subtasks.forEach(st => {
+            if (st.id === subtaskId) return;
+            // moving down
+            if (oldOrder < newOrder) {
+                if (st.order > oldOrder && st.order <= newOrder) {
+                    st.order -= 1;
+                }
+            }
+            // moving up
+            if (oldOrder > newOrder) {
+                if (st.order >= newOrder && st.order < oldOrder) {
+                    st.order += 1;
+                }
+            }
+        });
+        movedSubtask.order = newOrder;
+        task.subtasks = subtasks
+            .sort((a, b) => a.order - b.order)
+            .map((st, index) => ({ ...st, order: index }));
+
+        return movedSubtask;
+    },
+
+    moveSubtask(projectId, fromTaskId, toTaskId, subtaskId, newOrder = null) {
+        const project = projects.find(p => p.id === projectId);
+        if (!project) return null;
+
+        const fromTask = project.tasks.find(t => t.id === fromTaskId);
+        const toTask = project.tasks.find(t => t.id === toTaskId);
+        if (!fromTask || !toTask) return null;
+
+        const subtaskIndex = fromTask.subtasks.findIndex(st => st.id === subtaskId);
+        if (subtaskIndex === -1) return null;
+
+        // remove subtask from source task
+        const [movedSubtask] = fromTask.subtasks.splice(subtaskIndex, 1);
+
+        // reindex source subtasks
+        fromTask.subtasks = fromTask.subtasks
+            .sort((a, b) => a.order - b.order)
+            .map((st, index) => ({ ...st, order: index }));
+
+        // determine target order
+        const insertOrder =
+            newOrder === null || newOrder > toTask.subtasks.length
+                ? toTask.subtasks.length
+                : newOrder;
+
+        // shift target subtasks
+        toTask.subtasks.forEach(st => {
+            if (st.order >= insertOrder) {
+                st.order += 1;
+            }
+        });
+        movedSubtask.order = insertOrder;
+        toTask.subtasks.push(movedSubtask);
+
+        // normalize target subtasks
+        toTask.subtasks = toTask.subtasks
+            .sort((a, b) => a.order - b.order)
+            .map((st, index) => ({ ...st, order: index }));
+
+        return movedSubtask;
+    },
+
+
 };
 
 export default Project;

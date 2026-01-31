@@ -145,3 +145,52 @@ export const deleteSubtask = (req, res) => {
     }
     res.status(204).send();
 };
+
+// Order change subtask
+export const orderChangeSubtask = (req, res) => {
+    const { projectId, taskId, subtaskId } = req.params;
+    const { newOrder } = req.body;
+
+    if (newOrder === undefined) {
+        return res.status(400).json({ message: 'newOrder is required' });
+    }
+
+    const subtask = Project.orderChangeSubtask(
+        projectId,
+        taskId,
+        subtaskId,
+        Number(newOrder)
+    );
+
+    if (!subtask) {
+        return res.status(404).json({ message: 'Subtask not found' });
+    }
+
+    res.json(subtask);
+};
+
+// Move subtask to another task
+export const moveSubtask = (req, res) => {
+    const { projectId, subtaskId } = req.params;
+    const { fromTaskId, toTaskId, newOrder } = req.body;
+
+    if (!fromTaskId || !toTaskId) {
+        return res.status(400).json({
+            message: 'fromTaskId and toTaskId are required',
+        });
+    }
+
+    const subtask = Project.moveSubtask(
+        projectId,
+        fromTaskId,
+        toTaskId,
+        subtaskId,
+        newOrder !== undefined ? Number(newOrder) : null
+    );
+
+    if (!subtask) {
+        return res.status(404).json({ message: 'Subtask not found' });
+    }
+
+    res.json(subtask);
+};

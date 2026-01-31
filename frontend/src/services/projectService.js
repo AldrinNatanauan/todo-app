@@ -77,6 +77,27 @@ const ProjectService = {
     const res = await api.delete(`/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}`);
     return res.status === 204;
   },
+
+  changeSubtaskOrder: async (projectId, taskId, subtaskId, newOrder) => {
+    const res = await api.put(
+      `/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}/order`,
+      { newOrder }
+    );
+    return res.data;
+  },
+
+  moveSubtask: async (projectId, subtaskId, fromTaskId, toTaskId, newOrder = null) => {
+    const res = await api.put(
+      `/projects/${projectId}/subtasks/${subtaskId}/move`,
+      {
+        fromTaskId,
+        toTaskId,
+        ...(newOrder !== null && { newOrder }),
+      }
+    );
+    return res.data;
+  },
+
 };
 
 export default ProjectService;

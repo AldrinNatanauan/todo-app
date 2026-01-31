@@ -14,7 +14,9 @@ import {
   orderChangeTask,
   addSubtask,
   toggleSubtask,
-  deleteSubtask
+  deleteSubtask,
+  orderChangeSubtask,
+  moveSubtask
 } from '../controllers/project.controller.js';
 
 const router = express.Router();
@@ -37,6 +39,8 @@ router.put('/:projectId/tasks/:taskId/order', orderChangeTask);
 // Subtasks
 router.post('/:projectId/tasks/:taskId/subtasks', addSubtask);
 router.put('/:projectId/tasks/:taskId/subtasks/:subtaskId/toggle', toggleSubtask);
+router.put('/:projectId/tasks/:taskId/subtasks/:subtaskId/order', orderChangeSubtask);
+router.put('/:projectId/subtasks/:subtaskId/move', moveSubtask);
 router.delete('/:projectId/tasks/:taskId/subtasks/:subtaskId', deleteSubtask);
 
 export default router;
