@@ -29,14 +29,13 @@ export default function ProjectDetail() {
   // Fetch project on mount
   const loadProject = useCallback(async () => {
     try {
-    setLoading(true);
-    const data = await ProjectService.getProject(projectId);
-    setProject(data);
+      setLoading(true);
+      const data = await ProjectService.getProject(projectId);
+      setProject(data);
     } finally {
-    setLoading(false);
+      setLoading(false);
     }
     }, [projectId]);
-
 
     useEffect(() => {
     if (projectId) loadProject();
@@ -224,35 +223,84 @@ export default function ProjectDetail() {
 
 
   // Move subtask across tasks
-  const handleMoveSubtask = async (subtaskId, fromTaskId, toTaskId, newOrder = null) => {
-    try {
-      const movedSubtask = await ProjectService.moveSubtask(
-        project.id,
-        subtaskId,
-        fromTaskId,
-        toTaskId,
-        newOrder
-      );
-      const updatedTasks = project.tasks.map(task => {
-        if (task.id === fromTaskId) {
-          const remainingSubtasks = task.subtasks
-            .filter(s => s.id !== subtaskId)
-            .map((s, i) => ({ ...s, order: i }));
-          return { ...task, subtasks: remainingSubtasks };
-        }
-        if (task.id === toTaskId) {
-          const newSubtasks = [...task.subtasks, movedSubtask]
-            .sort((a, b) => a.order - b.order)
-            .map((s, i) => ({ ...s, order: i }));
-          return { ...task, subtasks: newSubtasks };
-        }
-        return task;
+  const handleMoveSubtask = (fromTaskId, toTaskId, subtaskId, toIndex) => {
+  setProject(prev => {
+    // 1️⃣ Find the subtask FIRST
+    const fromTask = prev.tasks.find(t => t.id === fromTaskId);
+    if (!fromTask) return prev;
+
+    const movedSubtask = fromTask.subtasks.find(s => s.id === subtaskId);
+    if (!movedSubtask) return prev;
+
+    // 2️⃣ Build new tasks
+    const tasks = prev.tasks.map(task => {
+      // Remove from source
+      if (task.id === fromTaskId) {
+        const remaining = task.subtasks
+          .filter(s => s.id !== subtaskId)
+          .map((s, i) => ({ ...s, order: i }));
+
+        return { ...task, subtasks: remaining };
+      }
+
+      // Insert into destination
+      if (task.id === toTaskId) {
+        const subtasks = [...task.subtasks];
+        subtasks.splice(toIndex, 0, movedSubtask);
+
+        return {
+          ...task,
+          subtasks: subtasks.map((s, i) => ({ ...s, order: i }))
+        };
+      }
+
+      return task;
+    });
+
+    return { ...prev, tasks };
+  });
+  ProjectService.moveSubtask(
+    project.id,
+    subtaskId,
+    fromTaskId,
+    toTaskId,
+    toIndex
+  ).catch(() => loadProject());
+};
+
+
+  const handleReorderSubtasks = (taskId, fromIndex, toIndex) => {
+    setProject(prev => {
+      const tasks = prev.tasks.map(task => {
+        if (task.id !== taskId) return task;
+
+        const subtasks = [...task.subtasks];
+        const [moved] = subtasks.splice(fromIndex, 1);
+        subtasks.splice(toIndex, 0, moved);
+
+        return {
+          ...task,
+          subtasks: subtasks.map((s, i) => ({ ...s, order: i }))
+        };
       });
-      updateProject({ tasks: updatedTasks });
-    } catch (err) {
-      console.error(err);
-    }
+
+      return { ...prev, tasks };
+    });
+
+    const subtaskId = project.tasks
+      .find(t => t.id === taskId)
+      .subtasks[fromIndex].id;
+
+    ProjectService.changeSubtaskOrder(
+      project.id,
+      taskId,
+      subtaskId,
+      toIndex
+    ).catch(() => loadProject());
   };
+
+
+
 
 
 
@@ -348,12 +396,8 @@ export default function ProjectDetail() {
           onToggleSubtask={handleToggleSubtask}
           onEditSubtask={handleEditSubtask}
           onDeleteSubtask={handleDeleteSubtask}
-          onReorderSubtasks={(taskId, oldIndex, newIndex) => {
-            handleSubtaskDragEnd(taskId, tasks.find(t => t.id === taskId).subtasks[oldIndex].id, newIndex);
-          }}
-          onMoveSubtask={(fromTaskId, toTaskId, subtaskId, newOrder) => {
-            handleMoveSubtask(subtaskId, fromTaskId, toTaskId, newOrder);
-          }}
+          onReorderSubtasks={handleReorderSubtasks}
+          onMoveSubtask={handleMoveSubtask}
         />
 
         {/* Project Modal */}

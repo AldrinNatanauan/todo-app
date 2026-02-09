@@ -17,31 +17,47 @@ export default function TaskList({
   onReorderSubtasks,
   onMoveSubtask
 }) {
+
   const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    
-    const { type, source, destination } = result;
-    
+    const { source, destination, draggableId, type } = result;
+    if (!destination) return;
+
     if (type === 'task') {
+      if (source.index === destination.index) return;
       onReorderTasks(source.index, destination.index);
-    } else if (type === 'subtask') {
-      const sourceTaskId = source.droppableId;
-      const destTaskId = destination.droppableId;
-      
+      return;
+    }
+
+    if (type === 'subtask') {
+      const sourceTaskId = source.droppableId.replace('task-', '');
+      const destTaskId = destination.droppableId.replace('task-', '');
+      const subtaskId = draggableId.replace('subtask-', '');
+
+      if (
+        sourceTaskId === destTaskId &&
+        source.index === destination.index
+      ) return;
+
       if (sourceTaskId === destTaskId) {
-        onReorderSubtasks(sourceTaskId, source.index, destination.index);
+        onReorderSubtasks(
+          sourceTaskId,
+          source.index,
+          destination.index
+        );
       } else {
         onMoveSubtask(
           sourceTaskId,
           destTaskId,
-          result.draggableId,
+          subtaskId,
           destination.index
         );
       }
     }
   };
 
-  const sortedTasks = [...tasks].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const sortedTasks = [...tasks].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
@@ -56,7 +72,11 @@ export default function TaskList({
             )}
           >
             {sortedTasks.map((task, index) => (
-              <Draggable key={task.id} draggableId={task.id} index={index}>
+              <Draggable
+                key={task.id}
+                draggableId={`task-${task.id}`}
+                index={index}
+              >
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
@@ -72,11 +92,8 @@ export default function TaskList({
                       onToggleSubtask={onToggleSubtask}
                       onEditSubtask={onEditSubtask}
                       onDeleteSubtask={onDeleteSubtask}
-                      onReorderSubtasks={onReorderSubtasks}
-                      onMoveSubtask={onMoveSubtask}
                       dragHandleProps={provided.dragHandleProps}
                       isDragging={snapshot.isDragging}
-                      allTasks={tasks}
                     />
                   </div>
                 )}

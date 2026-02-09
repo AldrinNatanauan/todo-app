@@ -12,7 +12,8 @@ export default function SubtaskItem({
   onEdit, 
   onDelete,
   dragHandleProps,
-  isDragging 
+  isDragging,
+  projectColor
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(subtask.title);
@@ -48,7 +49,11 @@ export default function SubtaskItem({
       <Checkbox
         checked={subtask.completed}
         onCheckedChange={() => onToggle(subtask)}
-        className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+        className="border rounded-sm w-4 h-4 transition-colors"
+        style={{
+          backgroundColor: subtask.completed ? projectColor : undefined,
+          borderColor: subtask.completed ? projectColor : undefined,
+        }}
       />
 
       {isEditing ? (

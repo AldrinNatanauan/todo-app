@@ -7,7 +7,7 @@ import {
   Pencil, Trash2, Check, X 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Droppable, Draggable } from '@hello-pangea/dnd';
 import SubtaskItem from './SubtaskItem';
 import { cn } from '@/lib/utils';
 
@@ -21,11 +21,8 @@ export default function TaskItem({
   onToggleSubtask,
   onEditSubtask,
   onDeleteSubtask,
-  onReorderSubtasks,
-  onMoveSubtask,
   dragHandleProps,
-  isDragging,
-  allTasks
+  isDragging
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -58,24 +55,6 @@ export default function TaskItem({
     }
   };
 
-  const handleSubtaskDragEnd = (result) => {
-    if (!result.destination) return;
-    
-    const sourceTaskId = result.source.droppableId;
-    const destTaskId = result.destination.droppableId;
-    
-    if (sourceTaskId === destTaskId) {
-      onReorderSubtasks(task.id, result.source.index, result.destination.index);
-    } else {
-      onMoveSubtask(
-        sourceTaskId, 
-        destTaskId, 
-        result.draggableId, 
-        result.destination.index
-      );
-    }
-  };
-
   return (
     <motion.div
       layout
@@ -97,7 +76,12 @@ export default function TaskItem({
           <Checkbox
             checked={task.completed}
             onCheckedChange={() => onToggle(task)}
-            className="mt-1 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+            className="mt-1 border rounded-sm w-4 h-4"
+            style={{
+              // If checked, set bg to projectColor, else default bg
+              backgroundColor: task.completed ? projectColor : undefined,
+              borderColor: task.completed ? projectColor : undefined,
+            }}
           />
 
           <div className="flex-1 min-w-0">
@@ -131,11 +115,7 @@ export default function TaskItem({
                       onClick={() => setIsExpanded(!isExpanded)}
                       className="text-slate-400 hover:text-slate-600"
                     >
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4" />
-                      )}
+                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
                   )}
                   <h4 className={cn(
@@ -145,7 +125,7 @@ export default function TaskItem({
                     {task.title}
                   </h4>
                 </div>
-                
+
                 {task.description && (
                   <p className={cn(
                     "text-sm text-slate-500 mt-1",
@@ -174,7 +154,6 @@ export default function TaskItem({
               </>
             )}
           </div>
-
           {!isEditing && (
             <div className="flex items-center gap-1">
               <Button
@@ -204,7 +183,6 @@ export default function TaskItem({
             </div>
           )}
         </div>
-
         <AnimatePresence>
           {showAddSubtask && (
             <motion.div
@@ -238,15 +216,15 @@ export default function TaskItem({
         </AnimatePresence>
       </div>
 
-      {/* Always render droppable area for subtasks */}
-      <Droppable droppableId={task.id} type="subtask">
+      {/* SUBTASK DROPPABLE */}
+      <Droppable droppableId={`task-${task.id}`} type="subtask">
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
             className={cn(
               "transition-all",
-              (subtasks.length > 0 || snapshot.isDraggingOver) ? "border-t bg-slate-50/50" : "",
+              (subtasks.length > 0 || snapshot.isDraggingOver) && "border-t bg-slate-50/50",
               snapshot.isDraggingOver && "bg-indigo-50/50"
             )}
           >
@@ -256,20 +234,14 @@ export default function TaskItem({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className={cn(
-                    "p-3 space-y-1 min-h-[40px]",
-                    subtasks.length === 0 && snapshot.isDraggingOver && "min-h-[60px] flex items-center justify-center"
-                  )}
+                  className="p-3 space-y-1 min-h-[40px]"
                 >
-                  {subtasks.length === 0 && snapshot.isDraggingOver && (
-                    <p className="text-sm text-indigo-400 font-medium">Drop subtask here</p>
-                  )}
                   {subtasks
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                     .map((subtask, index) => (
-                      <Draggable 
-                        key={subtask.id} 
-                        draggableId={subtask.id} 
+                      <Draggable
+                        key={subtask.id}
+                        draggableId={`subtask-${subtask.id}`}
                         index={index}
                       >
                         {(provided, snapshot) => (
@@ -284,6 +256,7 @@ export default function TaskItem({
                               onDelete={(id) => onDeleteSubtask(task.id, id)}
                               dragHandleProps={provided.dragHandleProps}
                               isDragging={snapshot.isDragging}
+                              projectColor={projectColor}
                             />
                           </div>
                         )}
@@ -292,7 +265,7 @@ export default function TaskItem({
                   {provided.placeholder}
                 </motion.div>
               ) : (
-                <div className="min-h-[4px]">{provided.placeholder}</div>
+                <div className="min-h-[4px]" />
               )}
             </AnimatePresence>
           </div>
