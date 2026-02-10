@@ -35,11 +35,15 @@ export default function ProjectDetail() {
     } finally {
       setLoading(false);
     }
-    }, [projectId]);
+  }, [projectId]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (projectId) loadProject();
   }, [projectId, loadProject]);
+
+  useEffect(() => {
+    document.title = "Project: " + (project?.name || 'Loading...');
+  }, [project]);
 
   // Update project helper
   const updateProject = async (updates) => {

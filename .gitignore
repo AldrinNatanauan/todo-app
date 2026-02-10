@@ -22,7 +22,7 @@ frontend/.vite/
 # Electron logs
 *.log
 
-# Local data (important for your JSON storage)
+# Local data
 backend/data/
 userProfiles.json
 

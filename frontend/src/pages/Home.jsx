@@ -28,6 +28,7 @@ export default function Home() {
   };
 
   useEffect(() => {
+    document.title = "ArkNotes";
     loadProjects();
   }, []);
 
@@ -41,7 +42,7 @@ export default function Home() {
       }
       setEditingProject(null);
       setShowModal(false);
-      loadProjects(); // refresh list
+      loadProjects();
     } catch (err) {
       console.error('Error saving project:', err);
     }
@@ -55,7 +56,7 @@ export default function Home() {
   const handleDelete = async (id) => {
     try {
       await ProjectService.deleteProject(id);
-      loadProjects(); // refresh list
+      loadProjects();
     } catch (err) {
       console.error('Error deleting project:', err);
     }

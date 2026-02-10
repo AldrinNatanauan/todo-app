@@ -1,7 +1,8 @@
 // models/project.model.js
 import { v4 as uuidv4 } from 'uuid';
+import { loadProjects, saveProjects } from '../utils/fileDb.js';
 
-const projects = [];
+const projects = loadProjects();
 
 const Project = {
     getAll() {
@@ -24,6 +25,7 @@ const Project = {
         };
 
         projects.push(newProject);
+        saveProjects(projects);
         return newProject;
     },
 
@@ -33,16 +35,17 @@ const Project = {
 
 
         Object.assign(project, updates);
+        saveProjects(projects);
         return project;
-        },
+    },
 
 
-        remove(projectId) {
+    remove(projectId) {
         const index = projects.findIndex(p => p.id === projectId);
         if (index === -1) return false;
 
-
         projects.splice(index, 1);
+        saveProjects(projects);
         return true;
     },
 
@@ -56,6 +59,7 @@ const Project = {
                 subtask.completed = task.completed;
             });
         });
+        saveProjects(projects);
         return project;
     },
 
@@ -73,6 +77,7 @@ const Project = {
         };
 
         project.tasks.push(newTask);
+        saveProjects(projects);
         return newTask;
     },
 
@@ -84,6 +89,7 @@ const Project = {
         if (!task) return null;
 
         task.completed = !task.completed;
+        saveProjects(projects);
         return task;
     },
 
@@ -95,6 +101,7 @@ const Project = {
         if (!task) return null;
 
         Object.assign(task, updates);
+        saveProjects(projects);
         return task;
     },
 
@@ -106,6 +113,7 @@ const Project = {
         if (index === -1) return false;
 
         project.tasks.splice(index, 1);
+        saveProjects(projects);
         return true;
     },
 
@@ -140,6 +148,7 @@ const Project = {
             .sort((a, b) => a.order - b.order)
             .map((task, index) => ({ ...task, order: index }));
 
+        saveProjects(projects);
         return movedTask;
     },
 
@@ -158,6 +167,7 @@ const Project = {
         };
 
         task.subtasks.push(newSubtask);
+        saveProjects(projects);
         return newSubtask;
     },
 
@@ -172,6 +182,7 @@ const Project = {
         if (!subtask) return null;
 
         subtask.completed = !subtask.completed;
+        saveProjects(projects);
         return subtask;
     },
 
@@ -186,6 +197,7 @@ const Project = {
         if (index === -1) return false;
 
         task.subtasks.splice(index, 1);
+        saveProjects(projects);
         return true;
     },
 
@@ -223,6 +235,7 @@ const Project = {
             .sort((a, b) => a.order - b.order)
             .map((st, index) => ({ ...st, order: index }));
 
+        saveProjects(projects);
         return movedSubtask;
     },
 
@@ -265,6 +278,7 @@ const Project = {
             .sort((a, b) => a.order - b.order)
             .map((st, index) => ({ ...st, order: index }));
 
+        saveProjects(projects);
         return movedSubtask;
     },
 

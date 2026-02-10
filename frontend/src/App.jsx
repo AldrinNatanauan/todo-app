@@ -10,6 +10,8 @@ function App() {
   const [health, setHealth] = useState("loading...");
 
   useEffect(() => {
+    document.title = "ArkNotes";
+
     api.get('/health')
       .then((response) => {
         console.log("Backend response: ", response.data);

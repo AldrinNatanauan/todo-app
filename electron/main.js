@@ -7,6 +7,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, 'assets/icon.ico'),
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -20,7 +22,6 @@ function createWindow() {
       : `file://${path.join(__dirname, 'dist/index.html')}`;
 
   win.loadURL(START_URL);
-
 
 }
 
