@@ -47,71 +47,98 @@ export default function ProjectDetail() {
 
   // Update project helper
   const updateProject = async (updates) => {
-    if (!project) return;
-    setProject(prev => ({ ...prev, ...updates }));
-    await ProjectService.updateProject(project.id, {
-      ...project,
-      ...updates
+    setProject(prev => {
+      if (!prev) return prev;
+
+      const updated = { ...prev, ...updates };
+
+      ProjectService.updateProject(prev.id, updated)
+        .catch(() => loadProject());
+
+      return updated;
     });
   };
+
+  //Update task helper
+  const updateTasks = (taskUpdater) => {
+    setProject(prev => {
+      if (!prev) return prev;
+
+      const updatedTasks =
+        typeof taskUpdater === "function"
+          ? taskUpdater(prev.tasks)
+          : taskUpdater;
+
+      const updated = { ...prev, tasks: updatedTasks };
+
+      ProjectService.updateProject(prev.id, updated)
+        .catch(() => loadProject());
+
+      return updated;
+    });
+  };
+
 
   // Task handlers
   const handleAddTask = () => {
     if (!newTaskTitle.trim()) return;
-    const newTask = {
-      id: generateId(),
-      title: newTaskTitle.trim(),
-      description: '',
-      completed: false,
-      order: (project?.tasks?.length || 0),
-      subtasks: []
-    };
-    updateProject({
-      tasks: [...(project?.tasks || []), newTask]
-    });
+
+    updateTasks(tasks => [
+      ...tasks,
+      {
+        id: generateId(),
+        title: newTaskTitle.trim(),
+        description: '',
+        completed: false,
+        order: tasks.length,
+        subtasks: []
+      }
+    ]);
     setNewTaskTitle('');
   };
 
   const handleToggleTask = (task) => {
-    const updatedTasks = (project?.tasks || []).map(t =>
-      t.id === task.id ? {
-        ...t,
-        completed: !t.completed,
-        subtasks: (t.subtasks || []).map(s => ({
-          ...s,
-          completed: !t.completed
-        }))
-      }: t
+    updateTasks(tasks =>
+      tasks.map(t =>
+        t.id === task.id
+          ? {
+              ...t,
+              completed: !t.completed,
+              subtasks: (t.subtasks || []).map(s => ({
+                ...s,
+                completed: !t.completed
+              }))
+            }
+          : t
+      )
     );
-    updateProject({ tasks: updatedTasks });
   };
 
   const handleEditTask = (updatedTask) => {
-    const updatedTasks = (project?.tasks || []).map(t =>
-      t.id === updatedTask.id ? updatedTask : t
+    updateTasks(tasks =>
+      tasks.map(t =>
+        t.id === updatedTask.id ? updatedTask : t
+      )
     );
-    updateProject({ tasks: updatedTasks });
   };
 
   const handleDeleteTask = (taskId) => {
-    const updatedTasks = project.tasks
-      .filter(t => t.id !== taskId)
-      .map((t, i) => ({ ...t, order: i }));
-
-    updateProject({ tasks: updatedTasks });
+    updateTasks(tasks =>
+      tasks
+        .filter(t => t.id !== taskId)
+        .map((t, i) => ({ ...t, order: i }))
+    );
   };
 
   const handleTaskDragEnd = (taskId, newOrder) => {
-    setProject(prev => {
-      if (!prev?.tasks) return prev;
-
-      const tasks = prev.tasks.map(t => ({ ...t }));
-      const moved = tasks.find(t => t.id === taskId);
-      if (!moved) return prev;
+    updateTasks(tasks => {
+      const copied = tasks.map(t => ({ ...t }));
+      const moved = copied.find(t => t.id === taskId);
+      if (!moved) return tasks;
 
       const oldOrder = moved.order;
 
-      tasks.forEach(t => {
+      copied.forEach(t => {
         if (t.id === taskId) return;
 
         if (oldOrder < newOrder && t.order > oldOrder && t.order <= newOrder) {
@@ -125,10 +152,7 @@ export default function ProjectDetail() {
 
       moved.order = newOrder;
 
-      return {
-        ...prev,
-        tasks: tasks.sort((a, b) => a.order - b.order)
-      };
+      return copied.sort((a, b) => a.order - b.order);
     });
 
     ProjectService
@@ -137,15 +161,17 @@ export default function ProjectDetail() {
   };
 
 
+
   // Subtask handlers
   const handleAddSubtask = (taskId, title) => {
     if (!title.trim()) return;
 
-    setProject(prev => {
-      const updatedTasks = (prev?.tasks || []).map(task => {
+    updateTasks(tasks =>
+      tasks.map(task => {
         if (task.id !== taskId) return task;
 
         const subtasks = [...(task.subtasks || [])];
+
         const newSubtask = {
           id: generateId(),
           title: title.trim(),
@@ -153,160 +179,162 @@ export default function ProjectDetail() {
           order: subtasks.length
         };
 
-        return { ...task, subtasks: [...subtasks, newSubtask] };
-      });
-      return { ...prev, tasks: updatedTasks };
-    });
-
-    const task = project.tasks.find(t => t.id === taskId);
-    const newSubtask = {
-      id: generateId(),
-      title: title.trim(),
-      completed: false,
-      order: (task?.subtasks?.length || 0)
-    };
-
-    updateProject({
-      tasks: project.tasks.map(t => 
-        t.id === taskId ? { ...t, subtasks: [...(t.subtasks || []), newSubtask] } : t
-      )
-    });
+        return {
+          ...task,
+          completed: false,
+          subtasks: [...subtasks, newSubtask]
+        };
+      })
+    );
   };
 
   const handleToggleSubtask = (subtask) => {
-    const updatedTasks = (project?.tasks || []).map(task => {
-      if (!(task.subtasks || []).some(s => s.id === subtask.id)) return task;
-      const subtasks = task.subtasks.map(s => s.id === subtask.id ? { ...s, completed: !s.completed } : s);
-      const completed = subtasks.every(s => s.completed);
-      return { ...task, subtasks, completed };
-    });
-    updateProject({ tasks: updatedTasks });
+    updateTasks(tasks =>
+      tasks.map(task => {
+        if (!(task.subtasks || []).some(s => s.id === subtask.id)) {
+          return task;
+        }
+
+        const subtasks = task.subtasks.map(s =>
+          s.id === subtask.id
+            ? { ...s, completed: !s.completed }
+            : s
+        );
+
+        const completed =
+          subtasks.length > 0 &&
+          subtasks.every(s => s.completed);
+
+        return { ...task, subtasks, completed };
+      })
+    );
   };
 
   const handleEditSubtask = (subtask) => {
-    const updatedTasks = (project?.tasks || []).map(task => {
-      if (!(task.subtasks || []).some(s => s.id === subtask.id)) return task;
-      const subtasks = task.subtasks.map(s => s.id === subtask.id ? subtask : s);
-      return { ...task, subtasks };
-    });
-    updateProject({ tasks: updatedTasks });
+    updateTasks(tasks =>
+      tasks.map(task => {
+        if (!(task.subtasks || []).some(s => s.id === subtask.id)) {
+          return task;
+        }
+
+        const subtasks = task.subtasks.map(s =>
+          s.id === subtask.id ? subtask : s
+        );
+
+        return { ...task, subtasks };
+      })
+    );
   };
 
   const handleDeleteSubtask = (taskId, subtaskId) => {
-    const updatedTasks = (project?.tasks || []).map(task => {
-      if (task.id !== taskId) return task;
-      const subtasks = task.subtasks.filter(s => s.id !== subtaskId);
-      return { ...task, subtasks };
-    });
-    updateProject({ tasks: updatedTasks });
-  };
-
-  // Subtask drag within the same task
-  const handleSubtaskDragEnd = async (taskId, subtaskId, newOrder) => {
-    try {
-      const updatedSubtask = await ProjectService.changeSubtaskOrder(
-        project.id,
-        taskId,
-        subtaskId,
-        newOrder
-      );
-      const updatedTasks = project.tasks.map(task => {
+    updateTasks(tasks =>
+      tasks.map(task => {
         if (task.id !== taskId) return task;
+
         const subtasks = task.subtasks
-          .map(s => (s.id === subtaskId ? updatedSubtask : s))
-          .sort((a, b) => a.order - b.order)
-          .map((s, i) => ({ ...s, order: i }));
-        return { ...task, subtasks };
-      });
-
-      updateProject({ tasks: updatedTasks });
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-
-  // Move subtask across tasks
-  const handleMoveSubtask = (fromTaskId, toTaskId, subtaskId, toIndex) => {
-  setProject(prev => {
-    // 1️⃣ Find the subtask FIRST
-    const fromTask = prev.tasks.find(t => t.id === fromTaskId);
-    if (!fromTask) return prev;
-
-    const movedSubtask = fromTask.subtasks.find(s => s.id === subtaskId);
-    if (!movedSubtask) return prev;
-
-    // 2️⃣ Build new tasks
-    const tasks = prev.tasks.map(task => {
-      // Remove from source
-      if (task.id === fromTaskId) {
-        const remaining = task.subtasks
           .filter(s => s.id !== subtaskId)
           .map((s, i) => ({ ...s, order: i }));
 
-        return { ...task, subtasks: remaining };
-      }
+        const completed =
+          subtasks.length > 0 &&
+          subtasks.every(s => s.completed);
 
-      // Insert into destination
-      if (task.id === toTaskId) {
-        const subtasks = [...task.subtasks];
-        subtasks.splice(toIndex, 0, movedSubtask);
+        return { ...task, subtasks, completed };
+      })
+    );
+  };
 
-        return {
-          ...task,
-          subtasks: subtasks.map((s, i) => ({ ...s, order: i }))
-        };
-      }
+  // Move subtask across tasks
+  const handleMoveSubtask = (fromTaskId, toTaskId, subtaskId, toIndex) => {
+    if (!project?.id) return;
 
-      return task;
+    setProject(prev => {
+      if (!prev) return prev;
+
+      const tasks = prev.tasks;
+
+      const fromTask = tasks.find(t => t.id === fromTaskId);
+      if (!fromTask) return prev;
+
+      const movedSubtask = fromTask.subtasks.find(s => s.id === subtaskId);
+      if (!movedSubtask) return prev;
+
+      const updatedTasks = tasks.map(task => {
+        if (task.id === fromTaskId) {
+          const remaining = task.subtasks
+            .filter(s => s.id !== subtaskId)
+            .map((s, i) => ({ ...s, order: i }));
+
+          const completed =
+            remaining.length > 0 &&
+            remaining.every(s => s.completed);
+
+          return { ...task, subtasks: remaining, completed };
+        }
+
+        if (task.id === toTaskId) {
+          const subtasks = [...(task.subtasks || [])];
+          subtasks.splice(toIndex, 0, movedSubtask);
+
+          const reindexed = subtasks.map((s, i) => ({ ...s, order: i }));
+
+          const completed =
+            reindexed.length > 0 &&
+            reindexed.every(s => s.completed);
+
+          return { ...task, subtasks: reindexed, completed };
+        }
+
+        return task;
+      });
+
+      return { ...prev, tasks: updatedTasks };
     });
 
-    return { ...prev, tasks };
-  });
-  ProjectService.moveSubtask(
-    project.id,
-    subtaskId,
-    fromTaskId,
-    toTaskId,
-    toIndex
-  ).catch(() => loadProject());
-};
+    ProjectService.moveSubtask(
+      project.id,
+      subtaskId,
+      fromTaskId,
+      toTaskId,
+      toIndex
+    ).catch(() => loadProject());
+  };
 
 
   const handleReorderSubtasks = (taskId, fromIndex, toIndex) => {
-    setProject(prev => {
-      const tasks = prev.tasks.map(task => {
+    let movedSubtaskId = null;
+
+    updateTasks(tasks =>
+      tasks.map(task => {
         if (task.id !== taskId) return task;
 
-        const subtasks = [...task.subtasks];
+        const subtasks = [...(task.subtasks || [])];
         const [moved] = subtasks.splice(fromIndex, 1);
+
+        if (!moved) return task;
+
+        movedSubtaskId = moved.id;
+
         subtasks.splice(toIndex, 0, moved);
 
         return {
           ...task,
           subtasks: subtasks.map((s, i) => ({ ...s, order: i }))
         };
-      });
+      })
+    );
 
-      return { ...prev, tasks };
-    });
-
-    const subtaskId = project.tasks
-      .find(t => t.id === taskId)
-      .subtasks[fromIndex].id;
+    if (!movedSubtaskId) return;
 
     ProjectService.changeSubtaskOrder(
       project.id,
       taskId,
-      subtaskId,
+      movedSubtaskId,
       toIndex
     ).catch(() => loadProject());
   };
 
-
-
-
-
+  
 
   if (loading) {
     return (

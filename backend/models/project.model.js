@@ -278,6 +278,16 @@ const Project = {
             .sort((a, b) => a.order - b.order)
             .map((st, index) => ({ ...st, order: index }));
 
+        // Recompute completion state (source task)
+        fromTask.completed =
+            fromTask.subtasks.length > 0 &&
+            fromTask.subtasks.every(st => st.completed);
+
+        // Recompute completion state (destination task)
+        toTask.completed =
+            toTask.subtasks.length > 0 &&
+            toTask.subtasks.every(st => st.completed);
+
         saveProjects(projects);
         return movedSubtask;
     },
