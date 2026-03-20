@@ -1,21 +1,68 @@
 {
-  "name": "todo-app",
+  "name": "arknotes",
   "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron electron/main.js"
-  },
-  "keywords": [],
-  "author": "",
+  "description": "A Project based Todo App made with Electron + React + Express",
+  "main": "electron/main.js",
+  "author": "Aldrin Natanauan",
+  "productName": "ArkNotes",
   "license": "ISC",
   "type": "commonjs",
-  "devDependencies": {
-    "electron": "^40.0.0"
+
+  "scripts": {
+    "start": "concurrently \"npm run backend\" \"npm run frontend\" \"npm run electron\"",
+    "backend": "cd backend && node server.js",
+    "frontend": "cd frontend && npm run dev",
+    "electron": "cross-env NODE_ENV=development electron electron/main.js",
+    "build:react": "cd frontend && npm run build",
+    "build": "npm run build:react && electron-builder",
+    "dist": "npm run build"
   },
+
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.7.0",
+    "concurrently": "^9.2.1"
+  },
+
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1"
+  },
+
+  "build": {
+    "appId": "com.aldrin.arknotes",
+
+    "directories": {
+      "output": "release"
+    },
+
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "backend/**/*",
+      "package.json"
+    ],
+
+    "asarUnpack": [
+      "backend/**/*"
+    ],
+
+    "extraResources": [
+      {
+        "from": "backend/models",
+        "to": "data"
+      }
+    ],
+
+    "win": {
+      "target": "nsis",
+      "icon": "electron/assets/icon.ico"
+    },
+
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

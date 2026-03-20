@@ -23,6 +23,7 @@ frontend/.vite/
 *.log
 
 # Local data
+data/
 backend/data/
 userProfiles.json
 
