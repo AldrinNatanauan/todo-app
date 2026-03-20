@@ -15,14 +15,6 @@ app.use(express.json());
 app.use('/api/health', healthRoute);
 app.use('/api/projects', projectRoute);
 
-let server;
-
-export function startServer() {
-  server = app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
-}
-
-export function stopServer() {
-  if (server) server.close();
-}
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});

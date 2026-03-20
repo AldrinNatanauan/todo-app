@@ -1,21 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
 
-const basePath = app?.getPath ? app.getPath('userData') : path.resolve('data');
-
-const dbPath = path.join(basePath, 'projects.json');
-
-function ensureDirectory() {
-  if (!fs.existsSync(basePath)) {
-    fs.mkdirSync(basePath, { recursive: true });
-  }
-}
+const dbPath = path.resolve('data/projects.json');
 
 export function loadProjects() {
   try {
-    ensureDirectory();
-
     if (!fs.existsSync(dbPath)) {
       fs.writeFileSync(dbPath, JSON.stringify([], null, 2));
       return [];
@@ -31,8 +20,7 @@ export function loadProjects() {
 
 export function saveProjects(projects) {
   try {
-    ensureDirectory();
-    fs.writeFileSync(dbPath, JSON.stringify(projects, null, 2), { flag: 'w' });
+    fs.writeFileSync(dbPath, JSON.stringify(projects, null, 2));
   } catch (err) {
     console.error('Failed to save projects:', err);
   }
